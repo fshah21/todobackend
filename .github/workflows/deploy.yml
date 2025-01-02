@@ -1,0 +1,42 @@
+name: Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to main branch
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Step 1: Checkout the code
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    # Step 2: Set up Docker Buildx
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+
+    # Step 3: Log in to Google Cloud
+    - name: Set up Google Cloud CLI
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ secrets.GCP_PROJECT_ID }}  # Add your project ID as a GitHub secret
+        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}  # Add your service account key as a GitHub secret
+
+    # Step 4: Build and push Docker image to Google Container Registry (GCR)
+    - name: Build Docker image and push to GCR
+      run: |
+        IMAGE_NAME=gcr.io/${{ secrets.GCP_PROJECT_ID }}/socket-io-service:${{ github.sha }}
+        docker build -t $IMAGE_NAME .
+        docker push $IMAGE_NAME
+
+    # Step 5: Deploy to Cloud Run
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy socket-io-service \
+          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/socket-io-service:${{ github.sha }} \
+          --platform managed \
+          --region us-central1 \  # Choose the region you want to deploy to
+          --allow-unauthenticated  # Adjust based on if you want authentication enabled or not
