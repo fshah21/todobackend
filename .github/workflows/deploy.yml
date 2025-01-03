@@ -1,42 +1,52 @@
-name: Deploy to Google Cloud Run
+name: Socket Service Cloud Run Staging
 
 on:
   push:
     branches:
-      - main  # Trigger on push to main branch
+      - main
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
-
     steps:
-    # Step 1: Checkout the code
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-    # Step 2: Set up Docker Buildx
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v1
+      - name: "auth"
+        uses: "google-github-actions/auth@v1"
+        with:
+          credentials_json: "${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}"
 
-    # Step 3: Log in to Google Cloud
-    - name: Set up Google Cloud CLI
-      uses: google-github-actions/setup-gcloud@v2
-      with:
-        project_id: ${{ secrets.GCP_PROJECT_ID }}  # Add your project ID as a GitHub secret
-        credentials_json: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}  # Add your service account key as a GitHub secret
+      - name: "Set up Cloud SDK"
+        uses: "google-github-actions/setup-gcloud@v1"
+        with:
+          version: ">= 363.0.0"
 
-    # Step 4: Build and push Docker image to Google Container Registry (GCR)
-    - name: Build Docker image and push to GCR
-      run: |
-        IMAGE_NAME=asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gcr-repo/todobackend:${{ github.sha }}
-        docker build -t $IMAGE_NAME .
-        docker push $IMAGE_NAME
+      - name: Configure docker for GCP
+        run: gcloud auth configure-docker
 
-    # Step 5: Deploy to Cloud Run
-    - name: Deploy to Cloud Run
-      run: |
-        gcloud run deploy todobackend \
-        --image asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gcr-repo/todobackend:${{ github.sha }} \
-        --platform managed \
-        --region asia-south1 \
-        --allow-unauthenticated
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: ./todobackend
+          file: ./todobackend/Dockerfile
+          push: true
+          tags: gcr.io/todogoals-ea6d4/todobackend:latest
+          build-args: |
+            HTTP_PORT=8080
+
+      - name: Deploy to Cloud Run
+        uses: google-github-actions/deploy-cloudrun@v1
+        with:
+          image: gcr.io/todogoals-ea6d4/todobackend:latest
+          service: todobackend
+          region: asia-south1
+          no_traffic: true
+
+      - name: Verify new deployment
+        run: | # Optionally add your health check commands here
+          echo "Check the new deployment health"
+
+      - name: Migrate traffic
+        run: |
+          gcloud run services update-traffic todobackend --to-latest --region asia-south1 --platform managed
