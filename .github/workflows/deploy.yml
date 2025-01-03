@@ -41,7 +41,6 @@ jobs:
           image: gcr.io/todogoals-ea6d4/todobackend:latest
           service: todobackend
           region: asia-south1
-          no_traffic: true
 
       - name: Verify new deployment
         run: | # Optionally add your health check commands here
