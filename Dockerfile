@@ -1,18 +1,20 @@
-# Step 1: Use official Node.js image
-FROM node:16
+# Use an official Node.js runtime as the base image
+FROM node:18-slim
 
-# Step 2: Set the working directory
-WORKDIR /usr/src
+# Set the working directory in the container
+WORKDIR /src
 
-# Step 3: Install dependencies
+# Copy package.json and package-lock.json to the container
 COPY package*.json ./
+
+# Install app dependencies
 RUN npm install
 
-# Step 4: Copy the rest of the application
+# Bundle the app source code inside the Docker image
 COPY . .
 
-# Step 5: Expose the port Cloud Run uses (8080 by default)
-EXPOSE 8080
+# Build the TypeScript code
+RUN npm run build
 
-# Step 6: Set the start command
-CMD ["npm", "start"]
+# Specify the command to run when the container starts
+CMD [ "npm", "start" ]
