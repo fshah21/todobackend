@@ -28,15 +28,15 @@ jobs:
     # Step 4: Build and push Docker image to Google Container Registry (GCR)
     - name: Build Docker image and push to GCR
       run: |
-        IMAGE_NAME=gcr.io/${{ secrets.GCP_PROJECT_ID }}/socket-io-service:${{ github.sha }}
+        IMAGE_NAME=asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gcr-repo/todobackend:${{ github.sha }}
         docker build -t $IMAGE_NAME .
         docker push $IMAGE_NAME
 
     # Step 5: Deploy to Cloud Run
     - name: Deploy to Cloud Run
       run: |
-        gcloud run deploy socket-io-service \
-          --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/socket-io-service:${{ github.sha }} \
-          --platform managed \
-          --region us-central1 \  # Choose the region you want to deploy to
-          --allow-unauthenticated  # Adjust based on if you want authentication enabled or not
+        gcloud run deploy todobackend \
+        --image asia-south1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/gcr-repo/todobackend:${{ github.sha }} \
+        --platform managed \
+        --region asia-south1 \
+        --allow-unauthenticated
