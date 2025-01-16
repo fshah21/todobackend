@@ -27,17 +27,39 @@ io.on("connection", (socket: Socket) => {
   console.log(`User connected: ${socket.id}`);
 
   // Join a room for user communication
-  socket.on("join-room", ({ userId, matchedWith }) => {
+  socket.on("join-room", async ({ userId, matchedWith }) => {
     const roomId = [userId, matchedWith].sort().join("-");
     socket.join(roomId);
     console.log(`User ${userId} joined room: ${roomId}`);
+
+    try {
+      // Fetch message history for the room
+      const chatRef = db.collection("chats").doc(roomId).collection("messages");
+      const snapshot = await chatRef.orderBy("timestamp", "asc").get();
+
+      const messages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Emit message history only to the joining user
+      socket.emit("message-history", {
+        roomId,
+        messages,
+      });
+
+      // Optional: Notify others in the room (excluding the joining user) about the new user
+      socket.to(roomId).emit("user-joined", { userId, roomId });
+    } catch (error) {
+      console.error("Error fetching message history:", error);
+      socket.emit("error", { message: "Failed to fetch message history." });
+    }
+    
   });
 
   // Handle messages
   socket.on("send-message", async ({ roomId, message, messageType, senderId }) => {
     console.log(`Message in room ${roomId}:`, message);
-    io.to(roomId).emit("receive-message", { message, messageType, senderId }); // Broadcast to the room
-
     // Save message to Firestore
     const chatRef = db.collection("chats").doc(roomId); // Use roomId as chat_id
     const messageRef = chatRef.collection("messages").doc(uuidv4()); // Auto-generated document ID for messages
@@ -48,6 +70,14 @@ io.on("connection", (socket: Socket) => {
       message_type: messageType,
       message_content: message,
       timestamp: new Date().toISOString(),
+    });
+
+    io.to(roomId).emit("receive-message", {
+      roomId,
+      message,
+      messageType,
+      senderId,
+      timestamp: new Date().toISOString(), // Include timestamp for ordering
     });
   });
 
