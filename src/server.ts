@@ -43,8 +43,7 @@ io.on("connection", (socket: Socket) => {
       }));
 
       // Emit message history only to the joining user
-      socket.emit("message-history", {
-        roomId,
+      socket.to(roomId).emit("message-history", {
         messages,
       });
 
