@@ -34,6 +34,7 @@ io.on("connection", (socket: Socket) => {
 
     try {
       // Fetch message history for the room
+      console.log("ROOM ID", roomId);
       const chatRef = db.collection("chats").doc(roomId).collection("messages");
       const snapshot = await chatRef.orderBy("timestamp", "asc").get();
 
@@ -42,8 +43,10 @@ io.on("connection", (socket: Socket) => {
         ...doc.data(),
       }));
 
+      console.log("MESSAGES", messages);
+
       // Emit message history only to the joining user
-      socket.to(roomId).emit("message-history", {
+      io.to(roomId).emit("message-history", {
         messages,
       });
 
