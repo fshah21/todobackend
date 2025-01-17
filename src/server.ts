@@ -4,6 +4,32 @@ import { Server, Socket } from "socket.io";
 import cors from "cors";
 import { Firestore } from "@google-cloud/firestore";
 import { v4 as uuidv4 } from "uuid";
+const admin = require('firebase-admin');
+
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault(),
+    storageBucket: "https://todogoals-ea6d4.appspot.com", // Replace with your bucket URL
+  });
+}
+
+type MessageData = 
+  | {
+      sender_id: string;
+      chat_id: string;
+      message_type: "text";
+      message_content: string;
+      timestamp: string;
+    }
+  | {
+      sender_id: string;
+      chat_id: string;
+      message_type: "image";
+      image_url: string;
+      timestamp: string;
+    };
+
+const bucket = admin.storage().bucket();
 
 // Initialize Express
 const app = express();
@@ -60,27 +86,45 @@ io.on("connection", (socket: Socket) => {
   });
 
   // Handle messages
-  socket.on("send-message", async ({ roomId, message, messageType, senderId }) => {
+  socket.on("send-message", async ({ roomId, message, messageType, senderId, imagePath }) => {
     console.log(`Message in room ${roomId}:`, message);
     // Save message to Firestore
     const chatRef = db.collection("chats").doc(roomId); // Use roomId as chat_id
     const messageRef = chatRef.collection("messages").doc(uuidv4()); // Auto-generated document ID for messages
 
-    await messageRef.set({
-      sender_id: senderId,
-      chat_id: roomId,
-      message_type: messageType,
-      message_content: message,
-      timestamp: new Date().toISOString(),
-    });
+    let messageData: MessageData;
 
-    io.to(roomId).emit("receive-message", {
-      roomId,
-      message,
-      messageType,
-      senderId,
-      timestamp: new Date().toISOString(), // Include timestamp for ordering
-    });
+    if (messageType === "text") {
+      messageData = {
+        sender_id: senderId,
+        chat_id: roomId,
+        message_type: "text",
+        message_content: message,
+        timestamp: new Date().toISOString(),
+      };
+    } else if (messageType === "image") {
+      const imageName = `${roomId}/${uuidv4()}.jpg`;
+      const file = bucket.file(imageName);
+  
+      // Upload image to Firebase Storage
+      await file.save(Buffer.from(imagePath, 'base64'), {
+        metadata: { contentType: 'image/jpeg' },
+      });
+  
+      // Get public URL
+      const imageUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+      messageData = {
+        sender_id: senderId,
+        chat_id: roomId,
+        message_type: "image",
+        image_url: imageUrl,
+        timestamp: new Date().toISOString(),
+      };    
+    }
+
+    await messageRef.set(messageData);
+
+    io.to(roomId).emit("receive-message", messageData);
   });
 
   // Handle disconnect
