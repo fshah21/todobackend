@@ -103,8 +103,11 @@ io.on("connection", (socket: Socket) => {
         timestamp: new Date().toISOString(),
       };
     } else if (messageType === "image") {
+      console.log("MESSAGE TYPE IS IMAGE");
       const imageName = `${roomId}/${uuidv4()}.jpg`;
+      console.log("IMAGE NAME", imageName);
       const file = bucket.file(imageName);
+      console.log("FILE", file);
   
       // Upload image to Firebase Storage
       await file.save(Buffer.from(imagePath, 'base64'), {
@@ -113,6 +116,7 @@ io.on("connection", (socket: Socket) => {
   
       // Get public URL
       const imageUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+      console.log("IMAGE URL", imageUrl);
       messageData = {
         sender_id: senderId,
         chat_id: roomId,
@@ -120,6 +124,7 @@ io.on("connection", (socket: Socket) => {
         image_url: imageUrl,
         timestamp: new Date().toISOString(),
       };    
+      console.log("MESSAGE DATA", messageData);
     }
 
     await messageRef.set(messageData);
