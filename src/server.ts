@@ -9,7 +9,7 @@ const admin = require('firebase-admin');
 if (!admin.apps.length) {
   admin.initializeApp({
     credential: admin.credential.applicationDefault(),
-    storageBucket: "https://todogoals-ea6d4.appspot.com", // Replace with your bucket URL
+    storageBucket: "todogoals-ea6d4.appspot.com", // Replace with your bucket URL
   });
 }
 
