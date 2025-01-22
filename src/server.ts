@@ -110,9 +110,17 @@ io.on("connection", (socket: Socket) => {
       console.log("FILE", file);
   
       // Upload image to Firebase Storage
-      await file.save(Buffer.from(imagePath, 'base64'), {
-        metadata: { contentType: 'image/jpeg' },
+      const imageBuffer = Buffer.from(imagePath, 'base64');
+      console.log("IMAGE BUFFER CREATED");
+
+      // Upload the file
+      await file.save(imageBuffer, {
+        metadata: {
+          contentType: 'image/jpeg', // Ensure the content type matches the file type
+        },
       });
+
+      console.log("FILE SAVED");
   
       // Get public URL
       const imageUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
