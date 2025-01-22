@@ -30,6 +30,7 @@ type MessageData =
     };
 
 const bucket = admin.storage().bucket();
+console.log("BUCKET", bucket);
 
 // Initialize Express
 const app = express();
@@ -106,6 +107,7 @@ io.on("connection", (socket: Socket) => {
       console.log("MESSAGE TYPE IS IMAGE");
       const imageName = `${roomId}/${uuidv4()}.jpg`;
       console.log("IMAGE NAME", imageName);
+      console.log("BUCKET NAME", bucket.name);
       const file = bucket.file(imageName);
       console.log("FILE", file);
   
