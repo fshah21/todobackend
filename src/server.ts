@@ -123,15 +123,20 @@ io.on("connection", (socket: Socket) => {
       });
 
       console.log("FILE SAVED");
+
+      const [url] = await file.getSignedUrl({
+        action: 'read',
+        expires: '03-01-2025', // Set an expiration date
+      });
+      
+      console.log("IMAGE URL", url);
   
       // Get public URL
-      const imageUrl = `https://storage.googleapis.com/${bucket.name}/${file.name}`;
-      console.log("IMAGE URL", imageUrl);
       messageData = {
         sender_id: senderId,
         chat_id: roomId,
         message_type: "image",
-        image_url: imageUrl,
+        image_url: url,
         timestamp: new Date().toISOString(),
       };    
       console.log("MESSAGE DATA", messageData);
