@@ -140,6 +140,31 @@ io.on("connection", (socket: Socket) => {
         timestamp: new Date().toISOString(),
       };    
       console.log("MESSAGE DATA", messageData);
+
+      const chatDoc = await chatRef.get();
+      let scores = chatDoc.exists ? chatDoc.data()?.scores || {} : {};
+
+      const today = new Date().toISOString().split("T")[0]; // Get YYYY-MM-DD format
+
+      // Get last message date for sender
+      const userScore = scores[senderId] || { streak: 0, lastMessageDate: null };
+      const lastDate = userScore.lastMessageDate;
+
+      let newStreak = 1; // Default to 1 (reset)
+
+      if (lastDate) {
+          const lastMessageDate = new Date(lastDate);
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+
+          if (lastMessageDate.toISOString().split("T")[0] === yesterday.toISOString().split("T")[0]) {
+              newStreak = userScore.streak + 1; // +1 if consecutive day
+          }
+      }
+
+      // Update scores in Firestore
+      scores[senderId] = { streak: newStreak, lastMessageDate: today };
+      await chatRef.update({ scores });
     }
 
     await messageRef.set(messageData);
